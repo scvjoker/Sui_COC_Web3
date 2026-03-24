@@ -29,12 +29,16 @@ Ref: `.planning/phases/01-foundation--investigator-minting/01-CONTEXT.md`
 </read_first>
 <action>
 Create `coc_profile.move` module defining a `CoreProfile` object.
-Implement `create_profile(payment: Coin<SUI>, ctx: &mut TxContext)` that requires exactly `1_000_000_000` MIST (1 SUI) using `coin::value(&payment) == 1_000_000_000`. The payment is transferred to a treasury or burned.
+In the `init` function, create an `AdminCap` (transferred to the deployer) and a `Treasury` shared object to collect fees.
+Implement `create_profile(treasury: &mut Treasury, payment: Coin<SUI>, ctx: &mut TxContext)` that requires exactly `1_000_000_000` MIST (1 SUI) using `coin::value(&payment) == 1_000_000_000`. The payment is deposited into the `Treasury` balance.
+Implement `withdraw_fees(_cap: &AdminCap, treasury: &mut Treasury, amount: u64, ctx: &mut TxContext)` to allow the admin to withdraw collected SUI to their address.
 The profile must track `player_reputation: u64`, `kp_reputation: u64`, and `escape_count: u64`, defaulting to 100, 100, and 0 respectively.
 </action>
 <acceptance_criteria>
-- `coc_web3/sources/coc_profile.move` contains `struct CoreProfile` with fields `player_reputation`, `kp_reputation`, `escape_count`.
-- Contains `public fun create_profile` that takes `Coin<SUI>` and panics if value != 1 SUI.
+- `coc_web3/sources/coc_profile.move` contains `struct CoreProfile`, `struct AdminCap`, and `struct Treasury`.
+- `init` function properly initializes the admin cap and shared treasury.
+- Contains `public fun create_profile` that takes `Coin<SUI>` and deposits it.
+- Contains `public fun withdraw_fees` protected by `AdminCap`.
 - Output from `sui move build` inside `coc_web3` has 0 errors.
 </acceptance_criteria>
 </task>
