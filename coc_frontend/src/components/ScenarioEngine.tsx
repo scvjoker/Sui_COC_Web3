@@ -106,8 +106,8 @@ export function ScenarioEngine() {
     const root = document.getElementById('root');
     if (!root) return;
 
-    // 如果不在畫面內會被卸載還是需要清理？這在 App.tsx 處理 `!Play` 也可以
-    root.classList.remove('bg-desk', 'bg-lab-boss', 'bg-lab-boss2', 'bg-cosmic-tentacles', 'bg-default');
+    // 確保清理所有可能的背景 class，防止從其他 Tab 切換過來時殘留
+    root.classList.remove('bg-desk', 'bg-lab-boss', 'bg-lab-boss2', 'bg-cosmic-tentacles', 'bg-default', 'bg-magic-circle', 'bg-lab-corridor');
 
     if (phase === 'setup') {
       root.classList.add('bg-desk');

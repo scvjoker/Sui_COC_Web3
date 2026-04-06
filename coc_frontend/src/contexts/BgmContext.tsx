@@ -36,6 +36,7 @@ export const BgmProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true; // ✔ 確認有開啟循環播放
+      audioRef.current.preload = 'auto'; // 加強預讀取，優化部署後的延遲
     }
   }, []);
 
@@ -80,10 +81,11 @@ export const BgmProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (src) {
-      if (!audio.src.endsWith(src)) {
+      const fullSrc = window.location.origin + src;
+      if (audio.src !== fullSrc) {
         audio.src = src;
+        audio.load(); // 顯式觸發加載
         // User activation is required for auto-play in modern browsers,
-        // so we catch the promise exception silently
         audio.play().catch(e => console.warn('BGM play prevented by browser:', e));
       } else if (audio.paused && !isMuted) {
         audio.play().catch(e => console.warn('BGM play prevented by browser:', e));

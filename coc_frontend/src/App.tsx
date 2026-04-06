@@ -29,6 +29,9 @@ export default function App() {
   const { setCurrentTrack } = useBgm();
   
   useEffect(() => {
+    // 如果是 Play 模式，由 ScenarioEngine 自己管背景與 BGM
+    if (activeTab === 'Play') return;
+
     const root = document.getElementById('root');
     if (!root) return;
     root.classList.remove('bg-default', 'bg-magic-circle', 'bg-desk', 'bg-cosmic-tentacles', 'bg-lab-boss', 'bg-lab-corridor');
@@ -53,8 +56,8 @@ export default function App() {
       // 資產庫
       root.classList.add('bg-lab-corridor');
       setCurrentTrack('ambient');
-    } else if (activeTab !== 'Play') {
-      root.classList.add('bg-default'); // Play 的背景由 ScenarioEngine 自己管
+    } else {
+      root.classList.add('bg-default');
       setCurrentTrack('none');
     }
   }, [account, profileLoading, profile, activeTab, setCurrentTrack]);
