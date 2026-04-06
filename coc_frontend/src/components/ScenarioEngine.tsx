@@ -15,6 +15,8 @@ import { useI18n } from '../i18n/useI18n';
 import type { TranslationKey } from '../i18n/en';
 import { SmallRadarChart } from './InvestigatorMint';
 import { useBgm } from '../contexts/BgmContext';
+import { TypewriterModal } from './TypewriterModal';
+import { useLocalRunHistory } from '../hooks/useLocalRunHistory';
 
 // ── 屬性標籤 ──
 const getStatLabel = (stat: Stat, t: (k: TranslationKey) => string) => {
@@ -67,6 +69,7 @@ export function ScenarioEngine() {
   const { profile } = useCoreProfile();
   // 劇本結算 hook
   const { settle, settleStatus, settleError } = useSettleSessionWithDApp();
+  const { addRunRecord } = useLocalRunHistory();
   // BGM
   const { setCurrentTrack } = useBgm();
 
@@ -85,6 +88,10 @@ export function ScenarioEngine() {
   const [playerHpBoss, setPlayerHpBoss] = useState(0);
   const [bossLog, setBossLog] = useState<string[]>([]);
   const [bossPhase, setBossPhase] = useState<'intro' | 'fight' | 'done'>('intro');
+
+  const [modalText, setModalText] = useState<string | null>(null);
+  const [modalCallback, setModalCallback] = useState<(()=>void) | null>(null);
+  const [highlightedStat, setHighlightedStat] = useState<Stat | null>(null);
 
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -209,18 +216,32 @@ export function ScenarioEngine() {
     }
 
     // Check special outcomes
-    if (effect?.addFlag === 'escaped') {
-      setTimeout(() => triggerEnding(flags.has('found_insurance') ? 'escaped_with_evidence' : 'escaped'), 1200);
-      return;
-    }
-    if (effect?.addFlag === 'going_basement' || (!success && choice.id === 'go_deeper')) {
-      // Going to basement
-      setTimeout(() => loadNextFloor(-1), 1200);
-      return;
-    }
+    const resolveConsequences = () => {
+      setModalText(null);
+      setModalCallback(null);
 
-    // Advance to next floor
-    setTimeout(() => advanceFloor(currentEvent.floor, currentEvent.isStair), 1200);
+      if (effect?.addFlag === 'escaped') {
+        triggerEnding(flags.has('found_insurance') ? 'escaped_with_evidence' : 'escaped');
+        return;
+      }
+      if (effect?.addFlag === 'going_basement' || (!success && choice.id === 'go_deeper')) {
+        // Going to basement
+        loadNextFloor(-1);
+        return;
+      }
+      
+      // Advance to next floor
+      advanceFloor(currentEvent.floor, currentEvent.isStair);
+    };
+
+    // Construct the text to be displayed on modal
+    const statTitle = `${t('engine_log_roll_prefix')}${getStatLabel(choice.stat, t)}(${statVal})：${roll}${t('engine_log_roll_arrow')}${success ? t('engine_log_success_tag') : t('engine_log_fail_tag')}`;
+    const resultNarrative = success ? choice.successText : choice.failText;
+    const fullModalText = `${statTitle}\n\n${resultNarrative}`;
+
+    // Show typewriter modal
+    setModalText(fullModalText);
+    setModalCallback(() => resolveConsequences);
   };
 
   const advanceFloor = (fromFloor: number, wasStair?: boolean) => {
@@ -296,6 +317,13 @@ export function ScenarioEngine() {
       };
       const obituary = obituaryMap[key] ?? 'An ending beyond description.';
 
+      addRunRecord({
+        scenarioTitle: t('engine_title') as string,
+        investigatorName: invName,
+        endingType: key,
+        statusSnapshot: `HP:${stats?.hp}/${stats?.maxHp} SAN:${stats?.san}/${stats?.maxSan}`,
+      });
+
       settle({
         profileObjectId: profile.objectId,
         investigatorName: invName,
@@ -325,17 +353,24 @@ export function ScenarioEngine() {
     }
 
     // Boss attacks
-    const bossAtk = rollD(4); // 1d4
-    const newPlayerHp = Math.max(0, playerHpBoss - bossAtk);
-    setPlayerHpBoss(newPlayerHp);
-    newLog.push(`${t('engine_boss_def_log')}${bossAtk}${t('engine_boss_def_dmg')}${newPlayerHp}`);
+    const bossRoll = rollD(100);
+    const isHit = bossRoll <= 60;
 
-    if (newPlayerHp <= 0) {
-      newLog.push(t('engine_boss_lose_log'));
-      setBossLog(prev => [...prev, ...newLog]);
-      setBossPhase('done');
-      setTimeout(() => triggerEnding('died_inside'), 1500);
-      return;
+    if (isHit) {
+      const bossAtk = rollD(4); // 1d4
+      const newPlayerHp = Math.max(0, playerHpBoss - bossAtk);
+      setPlayerHpBoss(newPlayerHp);
+      newLog.push(`[BRAWL(60): ${bossRoll} HIT] ${t('engine_boss_def_log')}${bossAtk}${t('engine_boss_def_dmg')}${newPlayerHp}`);
+
+      if (newPlayerHp <= 0) {
+        newLog.push(t('engine_boss_lose_log'));
+        setBossLog(prev => [...prev, ...newLog]);
+        setBossPhase('done');
+        setTimeout(() => triggerEnding('died_inside'), 1500);
+        return;
+      }
+    } else {
+      newLog.push(`[BOSS鬥毆(60): ${bossRoll} 判定失敗] 實驗體揮舞著利爪，但你驚險地閃過了攻擊...`);
     }
 
     setBossLog(prev => [...prev, ...newLog]);
@@ -578,26 +613,30 @@ export function ScenarioEngine() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── 事件日誌 ── */}
-        <div className="glass-panel p-4 crt-flicker">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3 typewriter flex items-center gap-2">
+        <div className="relative p-6 font-mono text-sm h-96 lg:h-[32rem] flex flex-col bg-[#050806] border border-green-900/40 rounded-xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.9)_inset]">
+          {/* CRT 掃描線特效與螢幕反光 */}
+          <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-30 z-10" />
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-green-500/5 via-transparent to-green-900/20 z-0" />
+          
+          <h3 className="relative z-20 text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]">
             <Terminal className="w-4 h-4" />
             {t('engine_event_log')}
           </h3>
           <div
             ref={logRef}
-            className="h-96 overflow-y-auto space-y-2 pr-2 scroll-smooth"
+            className="relative z-20 flex-1 overflow-y-auto space-y-2 pr-2 scroll-smooth scrollbar-thin scrollbar-thumb-green-900 scrollbar-track-transparent"
           >
             {logs.map((log, i) => (
               <p
                 key={i}
-                className={`text-xs leading-relaxed typewriter ${log.type === 'success' ? 'text-green-400' :
-                  log.type === 'fail' ? 'text-red-400' :
-                    log.type === 'system' ? 'text-slate-500' :
-                      log.type === 'boss' ? 'text-red-300 font-bold' :
-                        'text-slate-300'
+                className={`text-[11px] leading-relaxed font-mono drop-shadow-[0_0_5px_rgba(34,197,94,0.4)] ${log.type === 'success' ? 'text-green-400 font-bold' :
+                  log.type === 'fail' ? 'text-red-500 font-bold drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]' :
+                    log.type === 'system' ? 'text-green-800' :
+                      log.type === 'boss' ? 'text-red-400 font-bold bg-red-900/20 p-1 rounded' :
+                        'text-green-500'
                   }`}
               >
-                {log.text}
+                <span className="opacity-50 mr-2 text-green-800 select-none">sys&gt;</span>{log.text}
               </p>
             ))}
           </div>
@@ -673,6 +712,8 @@ export function ScenarioEngine() {
                 <button
                   key={choice.id}
                   onClick={() => handleChoice(choice)}
+                  onMouseEnter={() => setHighlightedStat(choice.stat)}
+                  onMouseLeave={() => setHighlightedStat(null)}
                   className="w-full text-left p-4 bg-black/40 border border-slate-800 rounded hover:border-green-500/30 hover:bg-black/60 transition-all cursor-pointer group"
                 >
                   <div className="flex justify-between items-start gap-3">
@@ -688,20 +729,20 @@ export function ScenarioEngine() {
 
           {/* Stats Card */}
           {stats && (
-            <div className="parchment-panel p-4">
-              <h4 className="text-[9px] text-slate-500 uppercase mb-3 tracking-widest typewriter">{t('engine_investigator_stats')}</h4>
-              <div className="grid grid-cols-3 gap-2">
-                {(['str', 'con', 'siz', 'dex', 'app', 'int', 'pow', 'edu', 'luck'] as Stat[]).map(stat => (
-                  <div key={stat} className="text-center">
-                    <div className="text-[8px] text-slate-600 typewriter">{getStatLabel(stat, t)}</div>
-                    <div className="text-sm font-bold font-mono text-slate-300">{stats[stat]}</div>
-                  </div>
-                ))}
+            <div className="glass-panel bg-black/80 p-6 flex flex-col items-center border border-green-900/40 shadow-[0_0_20px_rgba(34,197,94,0.05)_inset]">
+              <h4 className="text-[9px] text-green-600 uppercase tracking-widest typewriter w-full mb-6 font-bold">{t('engine_investigator_stats')}</h4>
+              <div className="pointer-events-none transform scale-125 my-4">
+                <SmallRadarChart size={180} stats={[stats.str, stats.con, stats.siz, stats.dex, stats.app, stats.int, stats.pow, stats.edu, stats.luck]} highlightedStat={highlightedStat ?? undefined} />
               </div>
             </div>
           )}
         </div>
       </div>
+      
+      {/* Typewriter Event Resolution Modal */}
+      {modalText && modalCallback && (
+        <TypewriterModal text={modalText} onComplete={modalCallback} />
+      )}
     </div>
   );
 }

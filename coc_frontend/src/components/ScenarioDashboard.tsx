@@ -128,10 +128,10 @@ export function ScenarioDashboard({ onJoin }: { onJoin: (s: Scenario) => void })
                 }}
               >
                 {/* 發黃的卷宗夾本體 */}
-                <div className={`p-6 sm:p-8 min-h-[320px] shadow-[8px_8px_20px_rgba(0,0,0,0.8)] border relative overflow-hidden flex flex-col justify-between transition-all duration-500
+                <div className={`p-6 sm:p-8 min-h-[320px] shadow-[8px_8px_20px_rgba(0,0,0,0.8)] border relative overflow-hidden flex flex-col justify-between transition-all duration-500 bg-[#d8ccbb]
                   ${isLocked 
-                    ? 'bg-[#d8ccbb] border-[#a39785]' 
-                    : 'parchment-panel border-[#bfae91] group-hover:shadow-[0_0_40px_rgba(46,204,113,0.4)] group-hover:border-green-500/80'}
+                    ? 'border-[#a39785]' 
+                    : 'border-[#bfae91] group-hover:shadow-[0_0_40px_rgba(46,204,113,0.4)] group-hover:border-green-500/80'}
                 `}>
                   
                   {/* 文件裝飾：紙夾與封箱膠帶 */}

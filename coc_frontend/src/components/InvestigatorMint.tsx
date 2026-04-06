@@ -16,7 +16,7 @@ type Stats = {
 };
 
 /** 小型雷達圖，用於已鑄造的角色卡 */
-export const SmallRadarChart = ({ stats, max = 100, size = 160 }: { stats: number[], max?: number, size?: number }) => {
+export const SmallRadarChart = ({ stats, max = 100, size = 160, onStatClick, highlightedStat }: { stats: number[], max?: number, size?: number, onStatClick?: (stat: string) => void, highlightedStat?: string }) => {
   const { t } = useI18n();
   const center = size / 2;
   const radius = size * 0.35;
@@ -44,9 +44,10 @@ export const SmallRadarChart = ({ stats, max = 100, size = 160 }: { stats: numbe
           strokeWidth="1"
         />
       ))}
-      {statKeys.map((_, i) => {
+      {statKeys.map((k, i) => {
         const p = getPoint(max, i);
-        return <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="rgba(46,204,113,0.15)" strokeWidth="1" />;
+        const isHighlighted = highlightedStat === k;
+        return <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke={isHighlighted ? "rgba(239,68,68,0.7)" : "rgba(46,204,113,0.15)"} strokeWidth={isHighlighted ? "2" : "1"} className="transition-all duration-300" />;
       })}
       <polygon 
         points={dataPath} 
@@ -57,15 +58,20 @@ export const SmallRadarChart = ({ stats, max = 100, size = 160 }: { stats: numbe
       {statKeys.map((k, i) => {
         const pLabel = getPoint(max * 1.25, i);
         const pValue = getPoint(max * 1.25, i);
+        const isInteractive = !!onStatClick;
+        const isHighlighted = highlightedStat === k;
         return (
           <text 
             key={k} x={pLabel.x} y={pLabel.y - 4} 
             dominantBaseline="middle" textAnchor="middle" 
-            fill="rgba(148, 163, 184, 0.8)" 
-            className="text-[7px] font-mono tracking-widest font-bold uppercase pointer-events-none"
+            fill={isHighlighted ? "#ef4444" : "rgba(148, 163, 184, 0.8)"}
+            onClick={() => onStatClick && onStatClick(k)}
+            className={`text-[7px] font-mono tracking-widest font-bold uppercase transition-all duration-200 ${isInteractive ? 'cursor-pointer hover:fill-yellow-400' : 'pointer-events-none'} ${isHighlighted ? 'scale-125 select-none drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]' : ''}`}
+            style={{ transformOrigin: `${pLabel.x}px ${pLabel.y}px` }}
           >
+            {isInteractive && <title>Reroll {t(`engine_stat_${k}` as TranslationKey)} (Cost: 1000 Game Token)</title>}
             {t(`engine_stat_${k}` as TranslationKey)}
-            <tspan x={pValue.x} y={pValue.y + 6} fill="white" className="text-[9px]">{stats[i]}</tspan>
+            <tspan x={pValue.x} y={pValue.y + 6} fill={isHighlighted ? "#fca5a5" : "white"} className={`pointer-events-none ${isHighlighted ? 'text-[11px] drop-shadow-[0_0_5px_rgba(239,68,68,1)]' : 'text-[9px]'}`}>{stats[i]}</tspan>
           </text>
         );
       })}
@@ -85,7 +91,6 @@ function InvestigatorCard({
   const sanity = f.pow; // SAN 暫時映射至 POW
   const statsArray = [f.str, f.con, f.siz, f.dex, f.app, f.int, f.pow, f.edu, f.luck];
   const { t } = useI18n();
-  const REROLLABLE_STATS = ['str', 'con', 'siz', 'dex', 'app', 'int', 'pow', 'edu', 'luck'] as const;
 
   return (
     <div className="glass-panel p-5 relative overflow-hidden group hover:border-green-500/50 transition-all duration-500">
@@ -120,23 +125,7 @@ function InvestigatorCard({
 
       {/* 神祕學雷達圖 */}
       <div className="flex flex-col items-center justify-center mt-2 py-2 bg-black/30 rounded border border-slate-800/50">
-        <SmallRadarChart stats={statsArray} />
-      </div>
-
-      {/* Reroll 個別屬性 */}
-      <div className="mt-4 pt-3 border-t border-slate-800/60">
-        <p className="text-[9px] text-slate-600 uppercase tracking-widest mb-2 font-mono">Reroll Attribute (costs 1000 Game Token)</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          {REROLLABLE_STATS.map((stat) => (
-            <button
-              key={stat}
-              onClick={() => onReroll(stat, inv.objectId)}
-              className="text-[9px] font-mono text-slate-500 bg-black/40 border border-slate-800 rounded px-1 py-0.5 hover:border-yellow-500/50 hover:text-yellow-400 transition-all uppercase"
-            >
-              {t(`engine_stat_${stat}` as TranslationKey)}
-            </button>
-          ))}
-        </div>
+        <SmallRadarChart stats={statsArray} onStatClick={(stat) => onReroll(stat, inv.objectId)} />
       </div>
     </div>
   );

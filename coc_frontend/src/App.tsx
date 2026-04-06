@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit-react';
-import { ShieldAlert, Loader2, Flame } from 'lucide-react';
+import { Loader2, Flame } from 'lucide-react';
 import { WalletConnect } from './components/WalletConnect';
 import { CreateProfile } from './components/CreateProfile';
 import { InvestigatorMint } from './components/InvestigatorMint';
@@ -88,7 +88,7 @@ export default function App() {
         <WalletConnect />
         <main className="max-w-7xl mx-auto px-6 py-12">
           <div className="text-center mt-20 animate-in fade-in duration-1000">
-            <ShieldAlert className="w-24 h-24 mx-auto text-[var(--color-coc-blood)]/50 mb-6 animate-pulse" />
+            <img src="/logo.webp" alt="Sui Cthulhu Logo" className="w-32 h-32 mx-auto drop-shadow-[0_0_15px_rgba(0,255,157,0.5)] mb-6 animate-pulse" />
             <h2 className="text-5xl cthulhu-text text-[var(--color-coc-parchment)] mb-6 drop-shadow-[0_0_15px_rgba(0,255,157,0.3)]">
               {t('landing_title')}
             </h2>
@@ -140,7 +140,8 @@ export default function App() {
       <WalletConnect />
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="space-y-8">
-          <nav className="flex gap-8 border-b border-slate-800 overflow-x-auto">
+          <nav className="flex items-center gap-8 border-b border-slate-800 overflow-x-auto">
+            <img src="/logo.webp" alt="Logo" className="h-8 w-8 ml-2 drop-shadow-[0_0_8px_rgba(0,255,157,0.8)]" />
             {navBtn('Expedition', t('nav_character'))}
             {navBtn('Manifest', t('nav_scenario'))}
             {navBtn('Profile', t('nav_profile'))}

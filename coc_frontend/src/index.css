@@ -170,12 +170,12 @@ body::after {
 
 /* ===== BLOOD PANEL (for death/failure) ===== */
 .blood-panel {
-  background: rgba(139, 0, 0, 0.08);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 0, 0, 0.25);
+  background: rgba(30, 5, 5, 0.75);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(139, 0, 0, 0.4);
   box-shadow:
-    0 4px 30px rgba(139, 0, 0, 0.2),
-    inset 0 0 60px rgba(139, 0, 0, 0.05);
+    0 4px 30px rgba(0, 0, 0, 0.8),
+    inset 0 0 60px rgba(139, 0, 0, 0.15);
   border-radius: 12px;
 }
 
