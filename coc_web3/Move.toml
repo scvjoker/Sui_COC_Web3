@@ -1,0 +1,11 @@
+[package]
+name = "CoC_Web3_Protocol"
+version = "0.0.1"
+edition = "2024.beta"
+
+[dependencies]
+onchain_invoice = { local = "../sui_workshop_3/onchain_invoice" }
+
+[addresses]
+
+onchain_invoice = "0x2ce854bbaabb8ea2569e7357c41831e9fba5a835afa7ed6a34d9424d7a2bd96c"
