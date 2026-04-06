@@ -73,42 +73,42 @@ body::after {
 }
 
 .bg-magic-circle {
-  background-image: url('/src/assets/bg_magic_circle.webp');
+  background-image: url('/assets/bg_magic_circle.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 .bg-desk {
-  background-image: url('/src/assets/bg_desk.webp');
+  background-image: url('/assets/bg_desk.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 .bg-cosmic-tentacles {
-  background-image: url('/src/assets/bg_cosmic_tentacles.webp');
+  background-image: url('/assets/bg_cosmic_tentacles.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 .bg-lab-boss {
-  background-image: url('/src/assets/bg_lab_boss.webp');
+  background-image: url('/assets/bg_lab_boss.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 .bg-lab-boss2 {
-  background-image: url('/src/assets/bg_lab_boss2.webp');
+  background-image: url('/assets/bg_lab_boss2.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 .bg-lab-corridor {
-  background-image: url('/src/assets/bg_lab_corridor.webp');
+  background-image: url('/assets/bg_lab_corridor.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;

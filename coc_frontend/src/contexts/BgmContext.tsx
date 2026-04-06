@@ -62,16 +62,16 @@ export const BgmProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     switch (currentTrack) {
       case 'ambient':
-        src = '/src/assets/bgm_ambient.mp3';
+        src = '/assets/bgm_ambient.mp3';
         break;
       case 'stairs':
-        src = `/src/assets/bgm_stairs_${langPrefix}_${trackVariantRef.current}.mp3`;
+        src = `/assets/bgm_stairs_${langPrefix}_${trackVariantRef.current}.mp3`;
         break;
       case 'boss':
-        src = `/src/assets/bgm_boss_${langPrefix}_${trackVariantRef.current}.mp3`;
+        src = `/assets/bgm_boss_${langPrefix}_${trackVariantRef.current}.mp3`;
         break;
       case 'ending':
-        src = '/src/assets/bgm_ending.mp3';
+        src = '/assets/bgm_ending.mp3';
         break;
       case 'none':
       default:
