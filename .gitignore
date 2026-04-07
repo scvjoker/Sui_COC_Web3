@@ -22,3 +22,6 @@ pnpm-debug.log*
 # Sui Move (Smart Contracts)
 build/
 .move/
+
+# Temporary
+tmp/

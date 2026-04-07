@@ -16,7 +16,7 @@ type Stats = {
 };
 
 /** 小型雷達圖，用於已鑄造的角色卡 */
-export const SmallRadarChart = ({ stats, max = 100, size = 160, onStatClick, highlightedStat }: { stats: number[], max?: number, size?: number, onStatClick?: (stat: string) => void, highlightedStat?: string }) => {
+export const SmallRadarChart = ({ stats, max = 100, size = 160, onStatClick }: { stats: number[], max?: number, size?: number, onStatClick?: (stat: string) => void }) => {
   const { t } = useI18n();
   const center = size / 2;
   const radius = size * 0.35;
@@ -36,7 +36,7 @@ export const SmallRadarChart = ({ stats, max = 100, size = 160, onStatClick, hig
   return (
     <svg width="100%" height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible drop-shadow-[0_0_8px_rgba(46,204,113,0.3)]">
       {[0.3, 0.6, 1].map(l => (
-        <polygon 
+        <polygon
           key={l}
           points={statKeys.map((_, i) => getPoint(max * l, i)).map(p => `${p.x},${p.y}`).join(' ')}
           fill="none"
@@ -44,34 +44,31 @@ export const SmallRadarChart = ({ stats, max = 100, size = 160, onStatClick, hig
           strokeWidth="1"
         />
       ))}
-      {statKeys.map((k, i) => {
+      {statKeys.map((_, i) => {
         const p = getPoint(max, i);
-        const isHighlighted = highlightedStat === k;
-        return <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke={isHighlighted ? "rgba(239,68,68,0.7)" : "rgba(46,204,113,0.15)"} strokeWidth={isHighlighted ? "2" : "1"} className="transition-all duration-300" />;
+        return <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="rgba(46,204,113,0.15)" strokeWidth="1" />;
       })}
-      <polygon 
-        points={dataPath} 
-        fill="rgba(46, 204, 113, 0.4)" 
-        stroke="rgb(46, 204, 113)" 
-        strokeWidth="1.5" 
+      <polygon
+        points={dataPath}
+        fill="rgba(46, 204, 113, 0.4)"
+        stroke="rgb(46, 204, 113)"
+        strokeWidth="1.5"
       />
       {statKeys.map((k, i) => {
         const pLabel = getPoint(max * 1.25, i);
         const pValue = getPoint(max * 1.25, i);
         const isInteractive = !!onStatClick;
-        const isHighlighted = highlightedStat === k;
         return (
-          <text 
-            key={k} x={pLabel.x} y={pLabel.y - 4} 
-            dominantBaseline="middle" textAnchor="middle" 
-            fill={isHighlighted ? "#ef4444" : "rgba(148, 163, 184, 0.8)"}
+          <text
+            key={k} x={pLabel.x} y={pLabel.y - 4}
+            dominantBaseline="middle" textAnchor="middle"
+            fill="rgba(148, 163, 184, 0.8)"
             onClick={() => onStatClick && onStatClick(k)}
-            className={`text-[7px] font-mono tracking-widest font-bold uppercase transition-all duration-200 ${isInteractive ? 'cursor-pointer hover:fill-yellow-400' : 'pointer-events-none'} ${isHighlighted ? 'scale-125 select-none drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]' : ''}`}
-            style={{ transformOrigin: `${pLabel.x}px ${pLabel.y}px` }}
+            className={`text-[7px] font-mono tracking-widest font-bold uppercase transition-all duration-200 ${isInteractive ? 'cursor-pointer hover:fill-yellow-400' : 'pointer-events-none'}`}
           >
             {isInteractive && <title>Reroll {t(`engine_stat_${k}` as TranslationKey)} (Cost: 1000 Game Token)</title>}
             {t(`engine_stat_${k}` as TranslationKey)}
-            <tspan x={pValue.x} y={pValue.y + 6} fill={isHighlighted ? "#fca5a5" : "white"} className={`pointer-events-none ${isHighlighted ? 'text-[11px] drop-shadow-[0_0_5px_rgba(239,68,68,1)]' : 'text-[9px]'}`}>{stats[i]}</tspan>
+            <tspan x={pValue.x} y={pValue.y + 6} fill="white" className="text-[9px] pointer-events-none">{stats[i]}</tspan>
           </text>
         );
       })}
@@ -276,7 +273,7 @@ export function InvestigatorMint() {
           {/* CRT 掃描線特效與螢幕反光 */}
           <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-30 z-10" />
           <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-green-500/5 via-transparent to-green-900/20 z-0" />
-          
+
           <h3 className="relative z-20 text-green-700/80 mb-5 uppercase tracking-[0.2em] border-b border-green-900/50 pb-3 flex items-center justify-between text-[11px] font-bold">
             <span className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 bg-green-800 rounded-sm inline-block shadow-[0_0_5px_rgba(34,197,94,0.3)]"></span>
@@ -284,11 +281,11 @@ export function InvestigatorMint() {
             </span>
             <span className="text-[10px] text-green-400 animate-pulse drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]">● {t('mint_terminal_live' as TranslationKey)}</span>
           </h3>
-          
+
           <div className="relative z-20 flex-1 space-y-1.5 overflow-y-auto pr-2 custom-scrollbar">
             {logs.length === 0 ? (
               <p className="text-green-700 mt-2 flex items-center text-xs">
-                <span className="mr-3 opacity-60">sys&gt;</span> 
+                <span className="mr-3 opacity-60">sys&gt;</span>
                 {t('mint_terminal_waiting' as TranslationKey)}
                 <span className="inline-block w-2.5 h-3.5 bg-green-600/80 ml-2 animate-ping" />
               </p>
@@ -298,11 +295,10 @@ export function InvestigatorMint() {
                 return (
                   <div
                     key={i}
-                    className={`font-mono text-xs leading-relaxed break-words py-1 animate-in slide-in-from-bottom-2 fade-in duration-300 ${
-                      isSuccess
+                    className={`font-mono text-xs leading-relaxed break-words py-1 animate-in slide-in-from-bottom-2 fade-in duration-300 ${isSuccess
                         ? 'text-green-400 drop-shadow-[0_0_3px_rgba(74,222,128,0.4)] font-bold'
                         : 'text-green-600/90'
-                    }`}
+                      }`}
                   >
                     <span className="opacity-50 mr-3 select-none">sys&gt;</span>{log}
                   </div>
