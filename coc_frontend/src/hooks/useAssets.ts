@@ -208,3 +208,82 @@ export function useFirstTaxCoin() {
   useEffect(() => { fetch(); }, [fetch]);
   return { coinId, refetch: fetch };
 }
+
+/**
+ * 取出目前錢包持有的「所有」USDC Coin Object ID 列表。
+ * 用於 buyTax 交易前先做 mergeCoins，避免單一 Coin Object 餘額不足問題。
+ */
+export function useAllUsdcCoins() {
+  const account = useCurrentAccount();
+  const client = useCurrentClient();
+  const [coinIds, setCoinIds] = useState<string[]>([]);
+
+  const fetch = useCallback(async () => {
+    if (!account?.address) { setCoinIds([]); return; }
+    try {
+      const res = await client.getOwnedObjects({
+        owner: account.address,
+        filter: { StructType: `0x2::coin::Coin<${USDC_TYPE}>` },
+        options: { showContent: false },
+      });
+      setCoinIds((res.data ?? []).map(d => d.data?.objectId ?? '').filter(Boolean));
+    } catch {
+      setCoinIds([]);
+    }
+  }, [account, client]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { fetch(); }, [fetch]);
+  return { coinIds, refetch: fetch };
+}
+
+/** 查詢 SUI 實時幣價 (SupraOracles Testnet) */
+export function useSuiPrice() {
+  const client = useCurrentClient();
+  const [price, setPrice] = useState<number | null>(null);
+
+  const fetch = useCallback(async () => {
+    try {
+      // Supra Oracle Holder: 0x87ef65b543ecb192e89d1e6afeaf38feeb13c3a20c20ce413b29a9cbfbebd570
+      // Feeds Table ID: 0x9b7deae1f9bb636bd83624f9f16e6b01e91ede3f9c88c07c695717c43ebac92a
+      // Asset Index 90: SUI/USD
+      const res = await client.getDynamicFieldObject({
+        parentId: '0x9b7deae1f9bb636bd83624f9f16e6b01e91ede3f9c88c07c695717c43ebac92a',
+        name: { type: 'u32', value: 90 },
+      });
+
+      const content = res.data?.content;
+      if (content?.dataType === 'moveObject') {
+        const f = content.fields as Record<string, unknown>;
+        // Supra 的 Table Entry 結構通常是在 value 欄位裡
+        const valueField = f.value as { fields: { value: string; decimal: string } } | undefined;
+        if (valueField && valueField.fields) {
+          const val = BigInt(valueField.fields.value);
+          const dec = Number(valueField.fields.decimal);
+          // Supra Testnet SUI/USD decimals 通常為 18
+          setPrice(Number(val) / Math.pow(10, dec));
+        }
+      }
+    } catch (e) {
+      console.error('useSuiPrice error:', e);
+    }
+  }, [client]);
+
+  useEffect(() => {
+    // 異步且非同步執行初次獲取，徹底避免同步觸發 setState 造成的 lint 警告
+    const initFetch = setTimeout(() => {
+      void fetch();
+    }, 0);
+
+    const timer = setInterval(() => {
+      void fetch();
+    }, 60000); // 1分鐘更新一次
+
+    return () => {
+      clearTimeout(initFetch);
+      clearInterval(timer);
+    };
+  }, [fetch]);
+
+  return { price, refetch: fetch };
+}

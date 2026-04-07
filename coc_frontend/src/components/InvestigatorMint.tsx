@@ -16,7 +16,19 @@ type Stats = {
 };
 
 /** 小型雷達圖，用於已鑄造的角色卡 */
-export const SmallRadarChart = ({ stats, max = 100, size = 160, onStatClick }: { stats: number[], max?: number, size?: number, onStatClick?: (stat: string) => void }) => {
+export const SmallRadarChart = ({ 
+  stats, 
+  max = 100, 
+  size = 160, 
+  onStatClick,
+  highlightedStat 
+}: { 
+  stats: number[], 
+  max?: number, 
+  size?: number, 
+  onStatClick?: (stat: string) => void,
+  highlightedStat?: string 
+}) => {
   const { t } = useI18n();
   const center = size / 2;
   const radius = size * 0.35;
@@ -58,18 +70,26 @@ export const SmallRadarChart = ({ stats, max = 100, size = 160, onStatClick }: {
         const pLabel = getPoint(max * 1.25, i);
         const pValue = getPoint(max * 1.25, i);
         const isInteractive = !!onStatClick;
+        const isHighlighted = highlightedStat === k;
+
         return (
-          <text
-            key={k} x={pLabel.x} y={pLabel.y - 4}
-            dominantBaseline="middle" textAnchor="middle"
-            fill="rgba(148, 163, 184, 0.8)"
-            onClick={() => onStatClick && onStatClick(k)}
-            className={`text-[7px] font-mono tracking-widest font-bold uppercase transition-all duration-200 ${isInteractive ? 'cursor-pointer hover:fill-yellow-400' : 'pointer-events-none'}`}
-          >
-            {isInteractive && <title>Reroll {t(`engine_stat_${k}` as TranslationKey)} (Cost: 1000 Game Token)</title>}
-            {t(`engine_stat_${k}` as TranslationKey)}
-            <tspan x={pValue.x} y={pValue.y + 6} fill="white" className="text-[9px] pointer-events-none">{stats[i]}</tspan>
-          </text>
+          <g key={k}>
+            {isHighlighted && (
+              <circle cx={pLabel.x} cy={pLabel.y - 1} r="12" fill="rgba(234, 179, 8, 0.1)" className="animate-pulse" />
+            )}
+            <text
+              x={pLabel.x} y={pLabel.y - 4}
+              dominantBaseline="middle" textAnchor="middle"
+              fill={isHighlighted ? "#facc15" : "rgba(148, 163, 184, 0.8)"}
+              onClick={() => onStatClick && onStatClick(k)}
+              style={isHighlighted ? { filter: 'drop-shadow(0 0 4px rgba(234, 179, 8, 0.8))' } : {}}
+              className={`text-[7px] font-mono tracking-widest font-bold uppercase transition-all duration-200 ${isInteractive ? 'cursor-pointer hover:fill-yellow-400' : 'pointer-events-none'} ${isHighlighted ? 'text-[9px]' : ''}`}
+            >
+              {isInteractive && <title>Reroll {t(`engine_stat_${k}` as TranslationKey)} (Cost: 1000 Game Token)</title>}
+              {t(`engine_stat_${k}` as TranslationKey)}
+              <tspan x={pValue.x} y={pValue.y + 6} fill={isHighlighted ? "white" : "white"} className={`${isHighlighted ? 'text-[10px] font-black' : 'text-[9px]'} pointer-events-none`}>{stats[i]}</tspan>
+            </text>
+          </g>
         );
       })}
     </svg>

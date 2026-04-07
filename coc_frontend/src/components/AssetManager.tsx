@@ -2,15 +2,19 @@ import { useState, useCallback, useEffect } from 'react';
 import { useI18n } from '../i18n/useI18n';
 import type { TranslationKey } from '../i18n/en';
 import { useMintUsdc, useBuyTaxCoin, useBuyItemWithLottery, useClaimLottery, useLotteryDraw } from '../hooks/useInvoice';
-import { useUsdcBalance, useTaxBalance, useMyInvoices, useFirstUsdcCoin, useFirstTaxCoin, useLotteryPool } from '../hooks/useAssets';
+import { useUsdcBalance, useTaxBalance, useMyInvoices, useFirstUsdcCoin, useFirstTaxCoin, useLotteryPool, useAllUsdcCoins, useSuiPrice } from '../hooks/useAssets';
 import { useCurrentClient, useCurrentAccount } from '@mysten/dapp-kit-react';
 import { Wallet, Receipt, Trophy, ShoppingBag, Sparkles, RefreshCw, Coins, AlertCircle, ShoppingCart } from 'lucide-react';
 import {
   INVOICE_PACKAGE_ID,
   USDC_TREASURY_CAP_ID,
   SYSTEM_OBJECT_ID,
+  DEFAULT_TAX_AMOUNT,
 } from '../contracts/invoice';
 import { COC_PACKAGE_ID } from '../contracts/protocol';
+
+// TAX_COIN decimals = 6
+const TAX_DECIMALS = 1_000_000n;
 
 // ── 是否已填好 Object IDs ─────────────────────────────────────────────────
 const SETUP_COMPLETE =
@@ -25,10 +29,12 @@ export function AssetManager() {
   const { balance: taxBalance, isLoading: taxLoading, refetch: refetchTax } = useTaxBalance();
   const { invoices, isLoading: invoicesLoading, refetch: refetchInvoices } = useMyInvoices();
   const { coinId: firstUsdcCoinId, refetch: refetchUsdcCoin } = useFirstUsdcCoin();
+  const { coinIds: allUsdcCoinIds } = useAllUsdcCoins();
   const { coinId: firstTaxCoinId } = useFirstTaxCoin();
 
   // ── 抖獎池狀態（System 物件）──
   const { pool, refetch: refetchPool } = useLotteryPool(SYSTEM_OBJECT_ID);
+  const { price: suiPrice } = useSuiPrice();
   // pool.winnerIndex === 0 代表還沒有手動抽獎
 
   // ── 檢查 Admin 權限 ──
@@ -61,7 +67,13 @@ export function AssetManager() {
 
   // 格式化 USDC（6 decimals）
   const fmtUsdc = (v: bigint) => (Number(v) / 1_000_000).toFixed(2);
-  const fmtTax = (v: bigint) => Number(v).toLocaleString();
+  // TAX_COIN 有6 decimals，與 USDC 相同。出示搮數時除以 1_000_000
+  const fmtTax = (v: bigint) => {
+    const display = v / TAX_DECIMALS;
+    const decimals = v % TAX_DECIMALS;
+    // 顯示小數（2位）
+    return `${display.toLocaleString()}.${String(Number(decimals) / 10_000).padStart(2, '0').slice(0, 2)}`;
+  };
 
   const handleRefreshAll = useCallback(() => {
     refetchUsdc();
@@ -74,7 +86,7 @@ export function AssetManager() {
   const statusBadge = (s: string) => {
     if (s === 'pending') return <span className="text-[9px] text-yellow-400 font-bold animate-pulse typewriter px-2">{t('assets_tx_pending')}</span>;
     if (s === 'success') return <span className="text-[9px] text-green-400 font-bold typewriter px-2">{t('assets_tx_success')}</span>;
-    if (s === 'error')   return <span className="text-[9px] text-red-400 font-bold typewriter px-2">{t('assets_tx_failed')}</span>;
+    if (s === 'error') return <span className="text-[9px] text-red-400 font-bold typewriter px-2">{t('assets_tx_failed')}</span>;
     return null;
   };
 
@@ -114,12 +126,25 @@ export function AssetManager() {
           </h2>
           <p className="text-slate-500 text-sm mt-1 typewriter uppercase tracking-widest">{t('assets_subtitle')}</p>
         </div>
-        <button
-          onClick={handleRefreshAll}
-          className="flex items-center gap-2 text-[10px] text-slate-500 hover:text-[#b8a164] transition-all typewriter uppercase"
-        >
-          <RefreshCw size={12} /> {t('assets_refresh')}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          {suiPrice !== null && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-cyan-950/30 border border-cyan-500/30 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+              </span>
+              <span className="text-[10px] font-bold font-mono text-cyan-400 uppercase tracking-tighter">
+                Live SUI: <span className="text-white">${suiPrice.toFixed(4)}</span>
+              </span>
+            </div>
+          )}
+          <button
+            onClick={handleRefreshAll}
+            className="flex items-center gap-2 text-[10px] text-slate-500 hover:text-[#b8a164] transition-all typewriter uppercase"
+          >
+            <RefreshCw size={12} /> {t('assets_refresh')}
+          </button>
+        </div>
       </div>
 
       <SetupBanner />
@@ -251,7 +276,7 @@ export function AssetManager() {
                 )}
                 <button
                   onClick={async () => {
-                    await buyTax(firstUsdcCoinId, parseInt(usdcAmount) * 1_000_000);
+                    await buyTax(firstUsdcCoinId!, allUsdcCoinIds, parseInt(usdcAmount) * 1_000_000);
                     setTimeout(handleRefreshAll, 2000);
                   }}
                   disabled={buyTaxStatus === 'pending' || !isAdmin}
@@ -280,7 +305,10 @@ export function AssetManager() {
           <div className="ml-auto flex items-center gap-4">
             <div className="text-right">
               <p className="text-[9px] text-slate-500 uppercase tracking-widest">{t('assets_potion_price' as TranslationKey)}</p>
-              <p className="text-xl font-bold font-mono text-green-400">10,000 TAX</p>
+              {/* DEFAULT_TAX_AMOUNT 為 raw TAX，除以 1_000_000 得到 display */}
+              <p className="text-xl font-bold font-mono text-green-400">
+                {(DEFAULT_TAX_AMOUNT / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: DEFAULT_TAX_AMOUNT % 1_000_000 ? 4 : 0 })} TAX
+              </p>
             </div>
           </div>
         </div>
@@ -313,7 +341,7 @@ export function AssetManager() {
       <div className="relative p-8 overflow-hidden rounded-xl border border-slate-700/60 shadow-2xl bg-[#0a0a0a]">
         {/* Terminal Texture & Scanline */}
         <div className="absolute inset-x-0 inset-y-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] z-0 mix-blend-overlay" />
-        
+
         <div className="flex items-center gap-4 border-b border-dashed border-slate-700 pb-4 mb-8 relative z-10">
           <div className="p-3 bg-black border border-slate-800 rounded">
             <Receipt size={24} className="text-slate-400 animate-pulse" />
@@ -332,7 +360,7 @@ export function AssetManager() {
           >
             <RefreshCw size={14} />
           </button>
-          
+
           {/* 執行抽獎 (Removed isAdmin restriction so it shows up) */}
           <button
             onClick={async () => {
@@ -383,17 +411,16 @@ export function AssetManager() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
             {invoices.map((inv) => {
               const hasWinner = pool && pool.winnerIndex !== null && pool.winnerIndex > 0;
-              const isWinner  = hasWinner && inv.fields.invoice_number === pool!.winnerIndex;
+              const isWinner = hasWinner && inv.fields.invoice_number === pool!.winnerIndex;
               const isExpired = !hasWinner;
 
               return (
                 <div
                   key={inv.objectId}
-                  className={`relative p-5 transition-all overflow-hidden ${
-                    isWinner
+                  className={`relative p-5 transition-all overflow-hidden ${isWinner
                       ? 'bg-[#1a1500] border-2 border-y-0 border-x-[#FFD700] shadow-[0_0_25px_rgba(255,215,0,0.3)] animate-pulse group'
                       : 'bg-[#0f0f0f] border border-y-0 border-x-slate-700 hover:bg-[#141414]'
-                  }`}
+                    }`}
                 >
                   {/* Top/Bottom ragged edge simulation with dashed borders */}
                   <div className={`absolute top-0 inset-x-0 border-t-2 border-dashed ${isWinner ? 'border-[#FFD700]' : 'border-slate-700'}`} />
@@ -403,9 +430,8 @@ export function AssetManager() {
                     <div className="flex justify-between items-start mb-6">
                       <div>
                         <span className="text-[8px] text-slate-500 font-mono tracking-widest block mb-1">{t('assets_invoice_no' as TranslationKey)}</span>
-                        <p className={`text-4xl font-black font-mono tracking-tighter ${
-                          isWinner ? 'text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.6)]' : 'text-slate-300'
-                        }`}>
+                        <p className={`text-4xl font-black font-mono tracking-tighter ${isWinner ? 'text-[#FFD700] drop-shadow-[0_0_10px_rgba(255,215,0,0.6)]' : 'text-slate-300'
+                          }`}>
                           {String(inv.fields.invoice_number).padStart(5, '0')}
                         </p>
                       </div>
@@ -415,7 +441,7 @@ export function AssetManager() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="space-y-2 text-[9px] font-mono text-slate-400 border-t border-dashed border-slate-800 pt-4 pb-4">
                       <div className="flex justify-between">
                         <span>{t('assets_sys_id' as TranslationKey)}</span>
@@ -423,7 +449,11 @@ export function AssetManager() {
                       </div>
                       <div className="flex justify-between">
                         <span>{t('assets_fee' as TranslationKey)}</span>
-                        <span className={isWinner ? 'text-[#FFD700]' : 'text-slate-300'}>{inv.fields.amount} TAX</span>
+                        <span className={isWinner ? 'text-[#FFD700]' : 'text-slate-300'}>
+                          {(inv.fields.amount / 1_000_000).toLocaleString(undefined, {
+                            minimumFractionDigits: inv.fields.amount % 1_000_000 ? 4 : 0
+                          })} TAX
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>{t('assets_tx_hash' as TranslationKey)}</span>

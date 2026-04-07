@@ -58,12 +58,28 @@ export function useBuyTaxCoin() {
   const dAppKit = useDAppKit();
   const [status, setStatus] = useState<TxStatus>('idle');
 
-  const buyTax = async (usdcCoinId: string, usdcAmount: number) => {
+  /**
+   * @param primaryUsdcCoinId  主要的 USDC Coin Object ID（必填）
+   * @param allUsdcCoinIds     錢包內所有 USDC Coin Object IDs（含主要那顆）
+   * @param usdcAmount         要兌換的 raw USDC 金額（已乘過 decimals）
+   */
+  const buyTax = async (primaryUsdcCoinId: string, allUsdcCoinIds: string[], usdcAmount: number) => {
     if (!account) return;
     setStatus('pending');
     try {
       const tx = new Transaction();
-      const [usdcSplit] = tx.splitCoins(tx.object(usdcCoinId), [usdcAmount]);
+      const primaryCoin = tx.object(primaryUsdcCoinId);
+
+      // ① 先把錢包內其他 USDC Coin Object 合併進主要那顆
+      //    避免 splitCoins 時因單一 Object 餘額不足而失敗
+      const others = allUsdcCoinIds.filter(id => id !== primaryUsdcCoinId);
+      if (others.length > 0) {
+        tx.mergeCoins(primaryCoin, others.map(id => tx.object(id)));
+      }
+
+      // ② 從合併後的 Coin 拆出所需金額
+      const [usdcSplit] = tx.splitCoins(primaryCoin, [usdcAmount]);
+
       // onchain_invoice::tax_coin::buy_quota(in_coin, treasury_cap, treasury, ctx)
       tx.moveCall({
         target: `${INVOICE_PACKAGE_ID}::tax_coin::buy_quota`,
